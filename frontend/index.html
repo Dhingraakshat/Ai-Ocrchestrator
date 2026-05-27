@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JARVIS</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0d1117;
+      --surface:  #161b22;
+      --border:   #30363d;
+      --text:     #e6edf3;
+      --muted:    #8b949e;
+      --accent:   #58a6ff;
+      --success:  #3fb950;
+      --warning:  #d29922;
+      --error:    #f85149;
+      --high:     #f85149;
+      --medium:   #d29922;
+      --low:      #3fb950;
+      --sidebar:  320px;
+    }
+
+    html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+
+    /* ── Layout ── */
+    .app { display: flex; height: 100vh; overflow: hidden; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: var(--sidebar);
+      min-width: var(--sidebar);
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+    }
+
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo { font-size: 20px; font-weight: 700; letter-spacing: 2px; color: var(--accent); }
+    .logo span { color: var(--muted); font-size: 11px; font-weight: 400; letter-spacing: 0; display: block; }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .msg {
+      max-width: 90%;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+    .msg.user    { align-self: flex-end; background: var(--accent); color: #fff; border-radius: 10px 10px 2px 10px; }
+    .msg.assistant { align-self: flex-start; background: var(--border); color: var(--text); border-radius: 10px 10px 10px 2px; }
+    .msg pre { background: rgba(0,0,0,0.3); border-radius: 6px; padding: 8px; overflow-x: auto; font-size: 11px; margin-top: 6px; }
+    .msg code { font-family: "Cascadia Code", "Fira Code", monospace; font-size: 12px; }
+    .msg strong { color: var(--accent); }
+
+    .chat-input-row {
+      padding: 12px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+    }
+
+    .chat-input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 8px 12px;
+      font-size: 13px;
+      outline: none;
+      resize: none;
+      height: 38px;
+      transition: border-color .15s;
+    }
+    .chat-input:focus { border-color: var(--accent); }
+
+    .send-btn {
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 0 14px;
+      transition: opacity .15s;
+    }
+    .send-btn:hover { opacity: .85; }
+    .send-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    .mic-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 0 10px;
+      height: 38px;
+      transition: all .15s;
+      flex-shrink: 0;
+    }
+    .mic-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .mic-btn.listening {
+      border-color: var(--error);
+      color: var(--error);
+      animation: pulse 1s infinite;
+    }
+
+    .voice-toggle {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px;
+      border-radius: 6px;
+      transition: opacity .15s;
+      opacity: .4;
+    }
+    .voice-toggle.on { opacity: 1; }
+    .voice-toggle:hover { opacity: 1; }
+
+    /* Agent selector */
+    .agent-selector {
+      padding: 8px 12px 4px;
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--border);
+    }
+    .agent-pill {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 11px;
+      padding: 3px 10px;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .agent-pill:hover { border-color: var(--accent); color: var(--accent); }
+    .agent-pill.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .listening-indicator {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: rgba(248,81,73,.1);
+      border: 1px solid var(--error);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--error);
+      margin: 0 12px 6px;
+    }
+    .listening-indicator.active { display: flex; }
+    .listening-dots span {
+      display: inline-block;
+      width: 5px; height: 5px;
+      background: var(--error);
+      border-radius: 50%;
+      margin: 0 1px;
+      animation: bounce 1s infinite;
+    }
+    .listening-dots span:nth-child(2) { animation-delay: .15s; }
+    .listening-dots span:nth-child(3) { animation-delay: .3s; }
+    @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+
+    /* ── Main grid ── */
+    .main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 0;
+      overflow: hidden;
+    }
+
+    .panel {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .panel:nth-child(2n) { border-right: none; }
+    .panel:nth-child(3), .panel:nth-child(4) { border-bottom: none; }
+
+    .panel-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .panel-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* ── Refresh button ── */
+    .refresh-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 12px;
+      padding: 3px 8px;
+      transition: border-color .15s, color .15s;
+    }
+    .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Priority badge ── */
+    .badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .05em;
+      padding: 1px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .badge.HIGH   { background: rgba(248,81,73,.15); color: var(--high); }
+    .badge.MEDIUM { background: rgba(210,153,34,.15); color: var(--warning); }
+    .badge.LOW    { background: rgba(63,185,80,.15); color: var(--low); }
+
+    /* ── Email cards ── */
+    .email-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 6px;
+      cursor: default;
+      transition: border-color .15s;
+    }
+    .email-card:hover { border-color: var(--accent); }
+    .email-card .subject { font-weight: 600; font-size: 13px; margin-bottom: 3px; display: flex; align-items: center; gap: 8px; }
+    .email-card .meta { color: var(--muted); font-size: 11px; margin-bottom: 4px; }
+    .email-card .snippet { font-size: 12px; color: var(--text); opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* ── Calendar ── */
+    .day-group { margin-bottom: 12px; }
+    .day-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 6px; }
+    .event-card {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 8px 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 5px;
+    }
+    .event-card.conflict { border-color: var(--error); background: rgba(248,81,73,.05); }
+    .event-time { font-size: 11px; color: var(--muted); min-width: 50px; padding-top: 1px; }
+    .event-details .title { font-size: 13px; font-weight: 500; }
+    .event-details .loc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* ── Agents panel ── */
+    .agent-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 5px;
+    }
+    .agent-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .agent-dot.running { background: var(--warning); animation: pulse 1s infinite; }
+    .agent-dot.done    { background: var(--success); }
+    .agent-dot.error   { background: var(--error); }
+    .agent-dot.idle, .agent-dot.deployed { background: var(--border); }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+
+    .agent-name { font-weight: 600; font-size: 13px; flex: 1; }
+    .agent-meta { font-size: 11px; color: var(--muted); }
+    .trigger-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 11px;
+      padding: 2px 7px;
+    }
+    .trigger-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Deploys ── */
+    .deploy-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 8px 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 5px;
+    }
+    .deploy-status { font-size: 16px; flex-shrink: 0; }
+    .deploy-info .branch { font-size: 11px; color: var(--accent); margin-bottom: 2px; }
+    .deploy-info .commit-msg { font-size: 13px; font-weight: 500; }
+    .deploy-info .ts { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+    /* ── Status bar ── */
+    .status-bar {
+      position: fixed;
+      bottom: 0;
+      right: 0;
+      left: var(--sidebar);
+      padding: 4px 16px;
+      font-size: 11px;
+      color: var(--muted);
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 10;
+    }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); flex-shrink: 0; }
+    .status-dot.disconnected { background: var(--error); animation: pulse 1s infinite; }
+
+    /* ── Empty state ── */
+    .empty { text-align: center; padding: 32px; color: var(--muted); font-size: 13px; }
+    .empty .icon { font-size: 28px; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ─── Chat Sidebar ─── -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div>
+        <div class="logo">JARVIS <span>Personal AI Assistant</span></div>
+      </div>
+      <button class="voice-toggle" id="voiceToggle" title="Toggle voice responses">🔊</button>
+    </div>
+
+    <div class="chat-messages" id="chatMessages">
+      <div class="msg assistant">
+        👋 Hey! I'm JARVIS. Ask me about your emails, calendar, news, tasks, or type <strong>build agent [description]</strong> to create a new AI agent.
+      </div>
+    </div>
+
+    <div class="agent-selector" id="agentSelector">
+      <button class="agent-pill active" data-agent="Auto">🔀 Auto</button>
+      <button class="agent-pill" data-agent="EmailAgent">📧 Email</button>
+      <button class="agent-pill" data-agent="CalendarAgent">📅 Calendar</button>
+      <button class="agent-pill" data-agent="NewsAgent">📰 News</button>
+      <button class="agent-pill" data-agent="TaskAgent">✅ Tasks</button>
+      <button class="agent-pill" data-agent="MemoryAgent">🧠 Memory</button>
+      <button class="agent-pill" data-agent="AgentFactory">🏭 Factory</button>
+    </div>
+
+    <div class="listening-indicator" id="listeningIndicator">
+      <div class="listening-dots"><span></span><span></span><span></span></div>
+      Listening…
+    </div>
+    <div class="chat-input-row">
+      <textarea
+        id="chatInput"
+        class="chat-input"
+        placeholder="Ask JARVIS anything… or press 🎤"
+        rows="1"
+      ></textarea>
+      <button class="mic-btn" id="micBtn" title="Hold to speak">🎤</button>
+      <button class="send-btn" id="sendBtn" title="Send">&#9658;</button>
+    </div>
+  </aside>
+
+  <!-- ─── Main panels ─── -->
+  <main class="main">
+
+    <!-- Email Digest -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">📧 Email Digest</div>
+        <button class="refresh-btn" onclick="triggerAgent('EmailAgent')">Refresh</button>
+      </div>
+      <div class="panel-body" id="emailPanel">
+        <div class="empty"><div class="icon">📭</div>No emails yet — ask JARVIS or wait for the 08:00 digest</div>
+      </div>
+    </div>
+
+    <!-- Calendar -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">📅 Calendar</div>
+        <button class="refresh-btn" onclick="triggerAgent('CalendarAgent')">Refresh</button>
+      </div>
+      <div class="panel-body" id="calendarPanel">
+        <div class="empty"><div class="icon">🗓️</div>No events yet</div>
+      </div>
+    </div>
+
+    <!-- Agents -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">🤖 Agents</div>
+        <div style="display:flex;gap:6px">
+          <button class="refresh-btn" onclick="runAllAgents()" id="runAllBtn">▶▶ Run All</button>
+          <button class="refresh-btn" onclick="loadState()">Refresh</button>
+        </div>
+      </div>
+      <div class="panel-body" id="agentsPanel">
+        <div class="empty"><div class="icon">⚙️</div>Loading agents…</div>
+      </div>
+    </div>
+
+    <!-- Deploys -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">🚀 GitHub Deploys</div>
+        <button class="refresh-btn" onclick="loadState()">Refresh</button>
+      </div>
+      <div class="panel-body" id="deploysPanel">
+        <div class="empty"><div class="icon">🔧</div>No deploys yet</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Status bar -->
+<div class="status-bar">
+  <div class="status-dot" id="statusDot"></div>
+  <span id="statusText">Connecting…</span>
+  <span>·</span>
+  <span id="lastUpdate">–</span>
+</div>
+
+<script>
+  // ── WebSocket ──────────────────────────────────────────────────────────────
+  const clientId = 'client_' + Date.now();
+  let ws = null;
+  let reconnectTimer = null;
+  let autoRefreshTimer = null;
+
+  function connect() {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    ws = new WebSocket(`${proto}://${location.host}/ws/${clientId}`);
+
+    ws.onopen = () => {
+      setStatus(true);
+      clearTimeout(reconnectTimer);
+    };
+
+    ws.onmessage = (ev) => {
+      try {
+        const msg = JSON.parse(ev.data);
+        if (msg.type === 'chat') {
+          appendMessage(msg.role, msg.content);
+        } else if (msg.type === 'state_update') {
+          renderState(msg.data);
+        } else if (msg.type === 'notification') {
+          showBrowserNotification(msg.title, msg.message);
+        }
+      } catch (e) { console.warn('WS parse error', e); }
+    };
+
+    ws.onclose = () => {
+      setStatus(false);
+      reconnectTimer = setTimeout(connect, 3000);
+    };
+
+    ws.onerror = () => ws.close();
+  }
+
+  function setStatus(ok) {
+    document.getElementById('statusDot').className = 'status-dot' + (ok ? '' : ' disconnected');
+    document.getElementById('statusText').textContent = ok ? 'Connected' : 'Reconnecting…';
+  }
+
+  // ── Agent selector ────────────────────────────────────────────────────────
+  let selectedAgent = 'Auto';
+
+  document.getElementById('agentSelector').addEventListener('click', (e) => {
+    const pill = e.target.closest('.agent-pill');
+    if (!pill) return;
+    document.querySelectorAll('.agent-pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    selectedAgent = pill.dataset.agent;
+  });
+
+  // ── Chat ──────────────────────────────────────────────────────────────────
+  function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ text, agent: selectedAgent }));
+    input.value = '';
+    input.style.height = '38px';
+    document.getElementById('sendBtn').disabled = true;
+    setTimeout(() => { document.getElementById('sendBtn').disabled = false; }, 300);
+  }
+
+  function appendMessage(role, content) {
+    const box = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = `msg ${role}`;
+    div.innerHTML = formatMarkdown(content);
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function formatMarkdown(text) {
+    return text
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/```[\w]*\n?([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+      .replace(/\n/g, '<br>');
+  }
+
+  document.getElementById('sendBtn').addEventListener('click', sendMessage);
+  document.getElementById('chatInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+
+  // ── State rendering ────────────────────────────────────────────────────────
+  function renderState(state) {
+    document.getElementById('lastUpdate').textContent = 'Updated ' + new Date().toLocaleTimeString();
+    renderEmails(state.emails || []);
+    renderCalendar(state.calendar || []);
+    renderAgents(state.agents || {});
+    renderDeploys(state.deploys || []);
+  }
+
+  function renderEmails(emails) {
+    const el = document.getElementById('emailPanel');
+    if (!emails.length) { el.innerHTML = '<div class="empty"><div class="icon">📭</div>No unread emails</div>'; return; }
+    el.innerHTML = emails.filter(e => !e.type).map(e => `
+      <div class="email-card">
+        <div class="subject">
+          <span class="badge ${e.priority || 'LOW'}">${e.priority || 'LOW'}</span>
+          ${esc(e.subject || '(no subject)')}
+        </div>
+        <div class="meta">${esc(e.sender || '')} · ${formatTime(e.date)}</div>
+        <div class="snippet">${esc(e.snippet || '')}</div>
+      </div>`).join('');
+  }
+
+  function renderCalendar(events) {
+    const el = document.getElementById('calendarPanel');
+    const normal = events.filter(e => !e.type);
+    const conflicts = events.filter(e => e.type === 'conflict');
+    if (!normal.length && !conflicts.length) { el.innerHTML = '<div class="empty"><div class="icon">🗓️</div>No upcoming events</div>'; return; }
+
+    const byDay = {};
+    normal.forEach(e => {
+      const day = e.start ? e.start.split('T')[0] : 'All Day';
+      (byDay[day] = byDay[day] || []).push(e);
+    });
+
+    const conflictHtml = conflicts.map(c => `
+      <div class="event-card conflict">
+        <div class="event-time">⚠</div>
+        <div class="event-details"><div class="title" style="color:var(--error)">${esc(c.message)}</div></div>
+      </div>`).join('');
+
+    const dayHtml = Object.entries(byDay).map(([day, evts]) => `
+      <div class="day-group">
+        <div class="day-label">${formatDay(day)}</div>
+        ${evts.map(e => `
+          <div class="event-card">
+            <div class="event-time">${formatEventTime(e.start)}</div>
+            <div class="event-details">
+              <div class="title">${esc(e.title || '(no title)')}</div>
+              ${e.location ? `<div class="loc">📍 ${esc(e.location)}</div>` : ''}
+            </div>
+          </div>`).join('')}
+      </div>`).join('');
+
+    el.innerHTML = conflictHtml + dayHtml;
+  }
+
+  function renderAgents(agents) {
+    const el = document.getElementById('agentsPanel');
+    const entries = Object.entries(agents);
+    if (!entries.length) { el.innerHTML = '<div class="empty">No agents configured</div>'; return; }
+    el.innerHTML = entries.map(([name, info]) => `
+      <div class="agent-row">
+        <div class="agent-dot ${info.status || 'idle'}"></div>
+        <div style="flex:1">
+          <div class="agent-name">${esc(name)}</div>
+          <div class="agent-meta">${info.status || 'idle'}${info.last_run ? ' · ' + formatTime(info.last_run) : ''}${info.preview ? ' · ' + esc(info.preview) : ''}</div>
+        </div>
+        <button class="trigger-btn" onclick="triggerAgent('${esc(name)}')">▶ Run</button>
+      </div>`).join('');
+  }
+
+  function renderDeploys(deploys) {
+    const el = document.getElementById('deploysPanel');
+    if (!deploys.length) { el.innerHTML = '<div class="empty"><div class="icon">🚀</div>No deploys yet. Push to main to trigger CI/CD.</div>'; return; }
+    el.innerHTML = deploys.map(d => `
+      <div class="deploy-row">
+        <div class="deploy-status">${conclusionIcon(d.conclusion, d.status)}</div>
+        <div class="deploy-info">
+          <div class="branch">🌿 ${esc(d.branch || 'main')} · ${esc(d.name || '')}</div>
+          <div class="commit-msg">${esc(d.commit || '–')}</div>
+          <div class="ts">${formatTime(d.created_at)}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function formatTime(s) {
+    if (!s) return '';
+    try { return new Date(s).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}); }
+    catch { return s; }
+  }
+
+  function formatDay(dateStr) {
+    try {
+      const d = new Date(dateStr + 'T00:00:00');
+      const today = new Date(); today.setHours(0,0,0,0);
+      const diff = Math.round((d - today) / 86400000);
+      if (diff === 0) return 'Today';
+      if (diff === 1) return 'Tomorrow';
+      return d.toLocaleDateString([], {weekday:'long', month:'short', day:'numeric'});
+    } catch { return dateStr; }
+  }
+
+  function formatEventTime(iso) {
+    if (!iso) return 'All day';
+    try { return new Date(iso).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }
+    catch { return iso; }
+  }
+
+  function conclusionIcon(conclusion, status) {
+    if (status === 'in_progress') return '🔄';
+    if (conclusion === 'success') return '✅';
+    if (conclusion === 'failure') return '❌';
+    if (conclusion === 'cancelled') return '⏹';
+    return '⏳';
+  }
+
+  // ── REST helpers ───────────────────────────────────────────────────────────
+  async function loadState() {
+    try {
+      const res = await fetch('/api/state');
+      const data = await res.json();
+      renderState(data);
+    } catch (e) { console.warn('loadState error', e); }
+  }
+
+  async function triggerAgent(name) {
+    try {
+      await fetch(`/api/trigger/${encodeURIComponent(name)}`, { method: 'POST' });
+    } catch (e) { console.warn('triggerAgent error', e); }
+  }
+
+  async function runAllAgents() {
+    const btn = document.getElementById('runAllBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Running…';
+    try {
+      await fetch('/api/trigger/all', { method: 'POST' });
+    } catch (e) { console.warn('runAll error', e); }
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.textContent = '▶▶ Run All';
+    }, 5000);
+  }
+
+  // ── Browser notifications ──────────────────────────────────────────────────
+  function showBrowserNotification(title, body) {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'granted') {
+      new Notification(title, { body, icon: '/favicon.ico' });
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission().then(p => {
+        if (p === 'granted') new Notification(title, { body });
+      });
+    }
+  }
+
+  // Request notification permission on load
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+
+  // ── Auto-refresh every 60s ─────────────────────────────────────────────────
+  function startAutoRefresh() {
+    clearInterval(autoRefreshTimer);
+    autoRefreshTimer = setInterval(loadState, 60_000);
+  }
+
+  // ── Voice ─────────────────────────────────────────────────────────────────
+  let voiceEnabled = false;
+  let recognition = null;
+  let isListening = false;
+
+  const voiceToggle = document.getElementById('voiceToggle');
+  const micBtn = document.getElementById('micBtn');
+  const listeningIndicator = document.getElementById('listeningIndicator');
+
+  // Toggle TTS on/off
+  voiceToggle.addEventListener('click', () => {
+    voiceEnabled = !voiceEnabled;
+    voiceToggle.classList.toggle('on', voiceEnabled);
+    voiceToggle.title = voiceEnabled ? 'Voice ON — click to mute' : 'Voice OFF — click to enable';
+    if (!voiceEnabled) window.speechSynthesis.cancel();
+  });
+
+  // Set up Speech Recognition
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SpeechRecognition) {
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => {
+      isListening = true;
+      micBtn.classList.add('listening');
+      listeningIndicator.classList.add('active');
+    };
+
+    recognition.onend = () => {
+      isListening = false;
+      micBtn.classList.remove('listening');
+      listeningIndicator.classList.remove('active');
+    };
+
+    recognition.onerror = (e) => {
+      isListening = false;
+      micBtn.classList.remove('listening');
+      listeningIndicator.classList.remove('active');
+      if (e.error !== 'no-speech') appendMessage('assistant', `🎤 Mic error: ${e.error}`);
+    };
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript.trim();
+      if (!transcript) return;
+      document.getElementById('chatInput').value = transcript;
+      sendMessage();
+    };
+
+    micBtn.addEventListener('click', () => {
+      if (isListening) {
+        recognition.stop();
+      } else {
+        window.speechSynthesis.cancel();
+        try { recognition.start(); } catch(e) {}
+      }
+    });
+  } else {
+    micBtn.title = 'Speech recognition not supported in this browser';
+    micBtn.style.opacity = '0.3';
+    micBtn.style.cursor = 'not-allowed';
+  }
+
+  // Speak text via browser TTS
+  function speak(text) {
+    if (!voiceEnabled || !text) return;
+    window.speechSynthesis.cancel();
+    // Strip markdown formatting
+    const clean = text
+      .replace(/```[\s\S]*?```/g, 'code block')
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/#+\s/g, '')
+      .replace(/\n/g, ' ')
+      .replace(/[🎤📧📅🤖🚀✅❌⚠️]/g, '')
+      .trim()
+      .slice(0, 500); // cap at 500 chars to avoid very long responses
+    if (!clean) return;
+    const utterance = new SpeechSynthesisUtterance(clean);
+    utterance.rate = 1.05;
+    utterance.pitch = 0.95;
+    // Pick a good voice if available
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v => v.name.includes('Google') && v.lang === 'en-US')
+      || voices.find(v => v.lang === 'en-US')
+      || voices[0];
+    if (preferred) utterance.voice = preferred;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  // Patch appendMessage to auto-speak assistant replies
+  const _origAppend = appendMessage;
+  appendMessage = function(role, content) {
+    _origAppend(role, content);
+    if (role === 'assistant') speak(content);
+  };
+
+  // Load voices (Chrome loads them async)
+  if (window.speechSynthesis) {
+    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  connect();
+  loadState();
+  startAutoRefresh();
+</script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+# secrets — never commit these
+.env
+credentials.json
+token.json
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# database
+*.db
+*.sqlite
+
+# logs
+*.log
+logs/
+
+# os
+.DS_Store
+Thumbs.db
+
+# vscode
+.vscode/
+
+# test cache
+.pytest_cache/
+.coverage
+_refs/

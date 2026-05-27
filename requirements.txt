@@ -1,0 +1,44 @@
+# Web server (ref: _refs/fastapi/docs_src/websockets_/tutorial003_py310.py)
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.6
+websockets>=13.0
+httpx>=0.27.2
+
+# Environment
+python-dotenv>=1.0.1
+
+# AI / Agents (ref: _refs/crewAI-examples/crews/instagram_post/agents.py)
+crewai>=0.65.0
+crewai-tools>=0.12.0
+litellm>=1.50.0
+langchain-groq>=0.1.9
+groq>=0.11.0
+
+# Google APIs (ref: _refs/google-api-python-client/samples/calendar_api/calendar_sample.py)
+google-api-python-client>=2.143.0
+google-auth-oauthlib>=1.2.1
+google-auth-httplib2>=0.2.0
+
+# HTTP requests (ref: _refs/crewAI-examples/crews/instagram_post/tools/search_tools.py)
+requests>=2.32.3
+
+# Job scheduler (ref: _refs/schedule/README.rst)
+schedule>=1.2.2
+
+# Memory layer (ref: _refs/mem0/README.md)
+mem0ai>=0.1.29
+chromadb>=0.5.0
+sentence-transformers>=3.1.0
+
+# Desktop notifications
+plyer>=2.1.0
+
+# GitHub integration
+PyGithub>=2.4.0
+
+# Testing
+pytest>=8.3.3
+pytest-asyncio>=0.24.0
+
+# Linting (used in CI/CD)
+ruff>=0.6.9

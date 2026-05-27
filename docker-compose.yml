@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  jarvis:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persist Google OAuth token and Mem0 vector store between restarts
+      - ./token.json:/app/token.json
+      - ./credentials.json:/app/credentials.json
+      - ./memory_store:/app/memory_store
+      - ./jarvis_tasks.db:/app/jarvis_tasks.db
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
