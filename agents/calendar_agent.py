@@ -147,9 +147,9 @@ def run_calendar_agent(query: str = "") -> list[dict] | str:
     conflict_text = "\n".join(conflicts) if conflicts else "No conflicts."
 
     system = (
-        "You are JARVIS, a personal AI assistant. Address the user as 'sir'. "
+        "You are JARVIS, a personal AI assistant. Address the user as 'sir' without inserting a comma before it. "
         "Answer in one or two sentences. Flag conflicts only if genuinely important. "
-        "If something needs scheduling, ask: 'Shall I add that to your calendar, sir?'"
+        "If something needs scheduling, ask: 'Shall I add that to your calendar sir?'"
     )
     user = (
         f"Schedule for the next 4 days:\n{event_summary}\n\nConflicts:\n{conflict_text}"

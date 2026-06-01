@@ -44,7 +44,7 @@ def _call(messages: list[dict], temperature: float = 0.1, max_tokens: int = 2048
             return _chat(messages, _FALLBACK_MODEL, temperature, max_tokens)
         except RateLimitError:
             return (
-                "I'm sorry, sir — Groq's daily token limit has been reached for both models. "
+                "I'm sorry sir — Groq's daily token limit has been reached for both models. "
                 "Please wait ~10 minutes or upgrade at https://console.groq.com/settings/billing"
             )
 

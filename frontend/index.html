@@ -544,11 +544,16 @@
     setTimeout(() => { document.getElementById('sendBtn').disabled = false; }, 300);
   }
 
+  function normalizeAssistantText(text) {
+    return text.replace(/,\s*sir\b/gi, ' sir');
+  }
+
   function appendMessage(role, content) {
     const box = document.getElementById('chatMessages');
     const div = document.createElement('div');
     div.className = `msg ${role}`;
-    div.innerHTML = formatMarkdown(content);
+    const displayText = role === 'assistant' ? normalizeAssistantText(content) : content;
+    div.innerHTML = formatMarkdown(displayText);
     box.appendChild(div);
     box.scrollTop = box.scrollHeight;
   }
@@ -739,13 +744,16 @@
   }
 
   // ── Voice ─────────────────────────────────────────────────────────────────
-  let voiceEnabled = false;
+  let voiceEnabled = true;
   let recognition = null;
   let isListening = false;
 
   const voiceToggle = document.getElementById('voiceToggle');
   const micBtn = document.getElementById('micBtn');
   const listeningIndicator = document.getElementById('listeningIndicator');
+
+  voiceToggle.classList.add('on');
+  voiceToggle.title = 'Voice ON — click to mute';
 
   // Toggle TTS on/off
   voiceToggle.addEventListener('click', () => {
@@ -809,6 +817,7 @@
     window.speechSynthesis.cancel();
     // Strip markdown formatting
     const clean = text
+      .replace(/,\s*sir\b/gi, ' sir')
       .replace(/```[\s\S]*?```/g, 'code block')
       .replace(/\*\*(.+?)\*\*/g, '$1')
       .replace(/`([^`]+)`/g, '$1')
@@ -836,6 +845,12 @@
     _origAppend(role, content);
     if (role === 'assistant') speak(content);
   };
+
+  // Speak the initial welcome message on load
+  if (voiceEnabled) {
+    const welcome = document.querySelector('.chat-messages .msg.assistant');
+    if (welcome) speak(welcome.textContent);
+  }
 
   // Load voices (Chrome loads them async)
   if (window.speechSynthesis) {

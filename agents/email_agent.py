@@ -83,9 +83,9 @@ def run_email_agent(query: str = "") -> list[dict] | str:
     )
 
     system = (
-        "You are JARVIS, a personal AI assistant. Address the user as 'sir'. "
+        "You are JARVIS, a personal AI assistant. Address the user as 'sir' without inserting a comma before it. "
         "Be concise — one or two sentences. Only flag genuinely urgent items. "
-        "If action is needed, ask: 'Shall I help with that, sir?'"
+        "If action is needed, ask: 'Shall I help with that sir?'"
     )
     user = (
         f"Analyze these emails and extract action items and deadlines:\n\n{email_summary}"

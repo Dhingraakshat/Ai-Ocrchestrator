@@ -68,7 +68,7 @@ def run_news_agent(topics: list[str] | None = None, query: str = "") -> list[dic
     )
 
     system = (
-        "You are JARVIS, a personal AI assistant. Address the user as 'sir'. "
+        "You are JARVIS, a personal AI assistant. Address the user as 'sir' without inserting a comma before it. "
         "Give a 2-3 sentence news summary — headline and one-line takeaway only. No filler."
     )
     user = (

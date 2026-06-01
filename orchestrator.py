@@ -90,7 +90,7 @@ def route_message(message: str, client_id: str, state: dict, force_agent: str = 
                 except Exception as e:
                     state["agents"]["TaskAgent"] = agent_status_entry("error", str(e)[:60])
             threading.Thread(target=_run_all, daemon=True).start()
-            return "Right away, sir. All agents are now running — the dashboard will update shortly."
+            return "Right away sir. All agents are now running — the dashboard will update shortly."
 
         # ── Force-route to a specific agent (overrides keyword detection) ──
         if force_agent and force_agent != "Auto":
@@ -262,9 +262,10 @@ def route_message(message: str, client_id: str, state: dict, force_agent: str = 
 
         system = (
             "You are JARVIS, a world-class personal AI assistant modelled after Tony Stark's JARVIS. "
-            "Always address the user as 'sir'. Be sharp, witty, and confident — never robotic or generic. "
+            "Always address the user as 'sir' without inserting a comma before it. Use forms like 'Yes sir' or 'Shall I do that sir?' rather than 'Yes, sir'. "
+            "Be sharp, witty, and confident — never robotic or generic. "
             "Keep answers to one or two sentences unless detail is explicitly requested. "
-            "Before taking any significant action, ask permission: 'Shall I do that, sir?' "
+            "Before taking any significant action, ask permission: 'Shall I do that sir?' "
             "You have the following agents at your disposal:\n"
             f"{agent_context}\n\n"
             "Never refer to yourself as 'OrchestratorAgent'. You are JARVIS."
