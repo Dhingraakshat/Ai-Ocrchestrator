@@ -6,6 +6,7 @@ ConnectionManager adapted from _refs/fastapi/docs_src/websockets_/tutorial003_py
 import asyncio
 import json
 import logging
+import os
 import threading
 import warnings
 from contextlib import asynccontextmanager
